@@ -20,7 +20,11 @@
   - ✅ Integrate Chakra UI for styling
   - ✅ Configure basic routing structure
   - ✅ Create initial app layout
-- ⬜ Set up Authentication
+- ✅ Set up Authentication
+  - ✅ Create AuthContext with JWT handling
+  - ✅ Implement Login and Register pages
+  - ✅ Add Protected Route functionality
+  - ✅ Create basic Dashboard
 - ⬜ Implement Stripe Integration
 - ⬜ Create AI Interaction System
 
