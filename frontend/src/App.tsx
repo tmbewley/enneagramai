@@ -6,6 +6,7 @@ import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Assessment from './pages/Assessment';
 
 const App: React.FC = () => {
   return (
@@ -16,13 +17,14 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route
-              path="/"
+            <Route path="/" element={<Dashboard />} />
+            <Route 
+              path="/assessment" 
               element={
                 <PrivateRoute>
-                  <Dashboard />
+                  <Assessment />
                 </PrivateRoute>
-              }
+              } 
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
