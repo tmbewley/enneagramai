@@ -10,15 +10,15 @@ const {
   premiumMiddleware 
 } = require('../middleware/errorMiddleware');
 
-// All routes require authentication
-router.use(authMiddleware);
-
-// Basic routes (available to all authenticated users)
+// Public routes (no authentication required)
 router.post('/chat', chatWithAI);
+
+// Protected routes (require authentication)
+router.use(authMiddleware);
 router.get('/history', getConversationHistory);
 
 // Premium routes (require subscription)
-router.use(premiumMiddleware); // Apply premium middleware to all routes below
+router.use(premiumMiddleware);
 router.get('/insights', getAIInsights);
 
 module.exports = router;

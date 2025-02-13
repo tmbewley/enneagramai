@@ -2,84 +2,138 @@ const asyncHandler = require('express-async-handler');
 const Conversation = require('../models/conversationModel');
 const KnowledgeBase = require('../models/knowledgeBaseModel');
 const User = require('../models/userModel');
+const OpenAI = require('openai');
 
-// @desc    Start or continue a conversation with AI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// @desc    Chat with AI (public or authenticated)
 // @route   POST /api/ai/chat
-// @access  Private
+// @access  Public
 const chatWithAI = asyncHandler(async (req, res) => {
-  const { message } = req.body;
-  const userId = req.user.id;
+  const { message, userId } = req.body;
 
   if (!message) {
     res.status(400);
     throw new Error('Please provide a message');
   }
 
-  // Get or create conversation
-  let conversation = await Conversation.findOne({
-    user: userId,
-    status: 'active'
-  }).sort({ createdAt: -1 });
+  let user = null;
+  let conversation = null;
 
-  if (!conversation) {
-    conversation = await Conversation.create({
+  // If userId is provided, get user and conversation context
+  if (userId) {
+    user = await User.findById(userId);
+    conversation = await Conversation.findOne({
       user: userId,
-      messages: [],
-      analysis: {
-        dominantThemes: [],
-        psychologicalInsights: [],
-        personalGrowth: {
-          challenges: [],
-          strengths: [],
-          recommendations: []
+      status: 'active'
+    }).sort({ createdAt: -1 });
+
+    if (!conversation) {
+      conversation = await Conversation.create({
+        user: userId,
+        messages: [],
+        analysis: {
+          dominantThemes: [],
+          psychologicalInsights: [],
+          personalGrowth: {
+            challenges: [],
+            strengths: [],
+            recommendations: []
+          }
         }
-      }
+      });
+    }
+  }
+
+  // Prepare conversation context for AI
+  const contextMessages = [];
+
+  // Add system message with Enneagram expertise
+  contextMessages.push({
+    role: 'system',
+    content: `You are an AI expert in the Enneagram system, psychology, and personal development. 
+    ${user?.enneagramType ? 
+      `The user is a Type ${user.enneagramType}${user.enneagramWing ? ` with a ${user.enneagramWing} wing` : ''}.` : 
+      'The user has not yet identified their Enneagram type.'}`
+  });
+
+  // Add conversation history for authenticated users
+  if (conversation) {
+    const recentMessages = conversation.messages.slice(-5); // Get last 5 messages
+    recentMessages.forEach(msg => {
+      contextMessages.push({
+        role: msg.role,
+        content: msg.content
+      });
     });
   }
 
-  // Add user message to conversation
-  conversation.messages.push({
+  // Add current user message
+  contextMessages.push({
     role: 'user',
-    content: message,
-    metadata: {
-      emotionalTone: '', // To be implemented with sentiment analysis
-      topics: [], // To be implemented with NLP
-    }
+    content: message
   });
 
-  // Generate AI response based on user's enneagram type and conversation history
-  const user = await User.findById(userId);
-  const response = await generateAIResponse(message, user, conversation);
+  try {
+    // Generate AI response using OpenAI
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: contextMessages,
+      temperature: 0.7,
+      max_tokens: 500
+    });
 
-  // Add AI response to conversation
-  conversation.messages.push({
-    role: 'assistant',
-    content: response.message,
-    metadata: {
-      emotionalTone: response.emotionalTone,
-      topics: response.topics,
-      enneagramReferences: response.enneagramReferences,
-      theoriesReferenced: response.theoriesReferenced
+    const aiResponse = completion.choices[0].message.content;
+    const responseMetadata = await analyzeResponse(aiResponse);
+
+    // If authenticated, save to conversation history
+    if (conversation) {
+      // Add user message
+      conversation.messages.push({
+        role: 'user',
+        content: message,
+        metadata: {
+          emotionalTone: responseMetadata.userTone,
+          topics: responseMetadata.topics,
+        }
+      });
+
+      // Add AI response
+      conversation.messages.push({
+        role: 'assistant',
+        content: aiResponse,
+        metadata: {
+          emotionalTone: responseMetadata.aiTone,
+          topics: responseMetadata.topics,
+          enneagramReferences: responseMetadata.enneagramReferences,
+          theoriesReferenced: responseMetadata.theoriesReferenced
+        }
+      });
+
+      // Update conversation analysis
+      await updateConversationAnalysis(conversation);
+      await conversation.save();
+
+      // Update user's conversation history if needed
+      if (user && !user.conversationHistory.includes(conversation._id)) {
+        user.conversationHistory.push(conversation._id);
+        await user.save();
+      }
     }
-  });
 
-  // Update conversation analysis
-  updateConversationAnalysis(conversation);
-
-  // Save conversation
-  await conversation.save();
-
-  // Update user's conversation history
-  if (!user.conversationHistory.includes(conversation._id)) {
-    user.conversationHistory.push(conversation._id);
-    await user.save();
+    res.status(200).json({
+      message: aiResponse,
+      analysis: responseMetadata
+    });
+  } catch (error) {
+    console.error('OpenAI API Error:', error);
+    res.status(500).json({
+      message: "I apologize, but I'm having trouble processing your request right now. Please try again in a moment.",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
-
-  res.status(200).json({
-    message: response.message,
-    analysis: response.analysis,
-    recommendations: response.recommendations
-  });
 });
 
 // @desc    Get conversation history
@@ -109,80 +163,110 @@ const getAIInsights = asyncHandler(async (req, res) => {
 
 // Helper Functions
 
-// Generate AI response based on user context and message
-const generateAIResponse = async (message, user, conversation) => {
-  // TODO: Implement actual AI logic
-  // This is a placeholder that will be replaced with real AI implementation
-  return {
-    message: "I understand your perspective. As a type " + 
-            (user.enneagramType || "unknown") + 
-            ", you might find it helpful to...",
-    emotionalTone: "supportive",
-    topics: ["self-awareness", "growth"],
-    enneagramReferences: [user.enneagramType],
-    theoriesReferenced: [{
-      category: "enneagram",
-      concept: "core motivations"
-    }],
-    analysis: {
-      dominantThemes: ["personal growth", "self-discovery"],
-      insights: [{
-        category: "behavior pattern",
-        description: "You seem to be exploring your relationship with...",
-        confidence: 0.8
-      }]
-    },
-    recommendations: [{
-      type: "exercise",
-      description: "Try this mindfulness practice...",
-      priority: 2
-    }]
-  };
+// Analyze AI response for metadata
+const analyzeResponse = async (response) => {
+  try {
+    const analysis = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "Analyze the following AI response and extract metadata including emotional tone, topics discussed, Enneagram references, and psychological theories referenced. Return the analysis in JSON format."
+        },
+        {
+          role: "user",
+          content: response
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 200
+    });
+
+    return JSON.parse(analysis.choices[0].message.content);
+  } catch (error) {
+    console.error('Response analysis error:', error);
+    return {
+      aiTone: "neutral",
+      topics: ["personal development"],
+      enneagramReferences: [],
+      theoriesReferenced: []
+    };
+  }
 };
 
 // Update conversation analysis based on message history
-const updateConversationAnalysis = (conversation) => {
-  // TODO: Implement actual analysis logic
-  // This is a placeholder that will be replaced with real implementation
-  conversation.analysis = {
-    dominantThemes: ["self-awareness", "growth"],
-    psychologicalInsights: [{
-      category: "pattern recognition",
-      description: "Recurring theme of self-reflection",
-      confidence: 0.85
-    }],
-    personalGrowth: {
-      challenges: ["resistance to change"],
-      strengths: ["self-awareness"],
-      recommendations: [{
-        type: "practice",
-        priority: 2
-      }]
-    }
-  };
+const updateConversationAnalysis = async (conversation) => {
+  try {
+    const messages = conversation.messages.map(m => m.content).join('\n');
+    const analysis = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "Analyze this conversation history and provide insights about dominant themes, psychological patterns, and growth opportunities. Return the analysis in JSON format."
+        },
+        {
+          role: "user",
+          content: messages
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 300
+    });
+
+    conversation.analysis = JSON.parse(analysis.choices[0].message.content);
+  } catch (error) {
+    console.error('Conversation analysis error:', error);
+    // Fallback to basic analysis if API fails
+    conversation.analysis = {
+      dominantThemes: ["personal growth"],
+      psychologicalInsights: [],
+      personalGrowth: {
+        challenges: [],
+        strengths: [],
+        recommendations: []
+      }
+    };
+  }
 };
 
 // Generate insights based on user data and conversation history
 const generateInsights = async (user, conversations) => {
-  // TODO: Implement actual insights generation
-  // This is a placeholder that will be replaced with real implementation
-  return {
-    patterns: [{
-      category: "communication",
-      description: "You tend to process information through...",
-      confidence: 0.9
-    }],
-    recommendations: [{
-      area: "personal growth",
-      suggestions: ["Practice mindfulness", "Journal daily"],
-      priority: "high"
-    }],
-    progressMetrics: {
-      selfAwareness: 7.5,
-      growthTrend: "positive",
-      keyAreas: ["emotional regulation", "boundary setting"]
-    }
-  };
+  try {
+    const conversationHistory = conversations.map(c => ({
+      messages: c.messages,
+      analysis: c.analysis
+    }));
+
+    const analysis = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: `Generate insights and recommendations for a Type ${user.enneagramType} user based on their conversation history. Return the analysis in JSON format.`
+        },
+        {
+          role: "user",
+          content: JSON.stringify(conversationHistory)
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 500
+    });
+
+    return JSON.parse(analysis.choices[0].message.content);
+  } catch (error) {
+    console.error('Insights generation error:', error);
+    return {
+      patterns: [],
+      recommendations: [],
+      progressMetrics: {
+        selfAwareness: 5,
+        growthTrend: "neutral",
+        keyAreas: []
+      }
+    };
+  }
 };
 
 module.exports = {
