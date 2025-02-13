@@ -14,7 +14,7 @@
 
 ## Next Steps
 - ✅ Create Controllers (Completed)
-- ⬜ Set up API Routes
+- ✅ Set up API Routes
 - ⬜ Initialize React Frontend
 - ⬜ Set up Authentication
 - ⬜ Implement Stripe Integration
@@ -22,6 +22,11 @@
 
 ## Completed Features
 ### Backend Structure (In Progress)
+- ✅ API Routes Configuration
+  - ✅ User authentication routes
+  - ✅ AI interaction endpoints
+  - ✅ Subscription management routes
+  - ✅ Protected route middleware
 - ✅ Payment System
   - ✅ Stripe integration
   - ✅ Subscription management
