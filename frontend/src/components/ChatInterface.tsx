@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
   VStack,
@@ -12,6 +12,8 @@ import {
   Divider,
   Badge,
 } from '@chakra-ui/react';
+import socketService from '../services/socketService';
+import TypingIndicator from './TypingIndicator';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -26,6 +28,8 @@ const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const toast = useToast();
@@ -35,8 +39,41 @@ const ChatInterface: React.FC = () => {
   };
 
   useEffect(() => {
+    // Initialize socket connection
+    socketService.connect();
+
+    // Listen for typing events
+    socketService.onUserTyping(({ typing }) => {
+      setIsTyping(typing);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      socketService.removeTypingListener();
+      socketService.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isTyping]);
+
+  const handleTyping = useCallback(() => {
+    if (user?._id) {
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Emit typing start
+      socketService.emitTypingStart(user._id);
+
+      // Set new timeout to emit typing end
+      typingTimeoutRef.current = setTimeout(() => {
+        socketService.emitTypingEnd(user._id);
+      }, 1000);
+    }
+  }, [user?._id]);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -136,6 +173,7 @@ const ChatInterface: React.FC = () => {
               borderRadius="lg"
             >
               <Text>{message.content}</Text>
+              {message.sender === 'ai' && isTyping && <TypingIndicator />}
             </Box>
             <Text
               fontSize="xs"
@@ -156,7 +194,10 @@ const ChatInterface: React.FC = () => {
             pr="4.5rem"
             placeholder="Type your message..."
             value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
+            onChange={(e) => {
+              setInputMessage(e.target.value);
+              handleTyping();
+            }}
             onKeyPress={handleKeyPress}
           />
           <InputRightElement width="4.5rem">
