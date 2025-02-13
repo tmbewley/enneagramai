@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChakraProvider } from '@chakra-ui/react';
+import { ChakraProvider, CSSReset } from '@chakra-ui/react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 const App: React.FC = () => {
   return (
     <ChakraProvider>
+      <CSSReset />
       <AuthProvider>
         <Router>
           <Routes>
@@ -23,7 +24,6 @@ const App: React.FC = () => {
                 </PrivateRoute>
               }
             />
-            {/* Catch all route - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
