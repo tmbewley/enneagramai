@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, Link as RouterLink, useLocation } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -17,13 +17,21 @@ import {
 } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 
+interface LocationState {
+  from?: Location;
+}
+
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, error, clearError } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
+
+  const locationState = location.state as LocationState;
+  const from = locationState?.from?.pathname || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +46,7 @@ const Login: React.FC = () => {
         duration: 3000,
         isClosable: true,
       });
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (err) {
       setIsSubmitting(false);
     }

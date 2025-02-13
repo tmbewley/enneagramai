@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -9,9 +10,9 @@ import {
   useToast,
   Flex,
   Spacer,
+  Badge,
 } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -31,7 +32,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <Container maxW="container.lg" py={8}>
-      <Flex mb={8}>
+      <Flex mb={8} align="center">
         <Heading>Dashboard</Heading>
         <Spacer />
         <Button colorScheme="blue" onClick={handleLogout}>
@@ -44,30 +45,31 @@ const Dashboard: React.FC = () => {
           <Heading size="md">Welcome, {user?.name}!</Heading>
           
           <Box>
-            <Text fontWeight="bold">Profile Information:</Text>
+            <Text fontWeight="bold" mb={2}>Profile Information:</Text>
             <Text>Email: {user?.email}</Text>
-            {user?.enneagramType && (
-              <Text>Enneagram Type: {user.enneagramType}
-                {user.enneagramWing && `w${user.enneagramWing}`}
-              </Text>
+            {user?.enneagramType ? (
+              <Flex align="center" mt={2}>
+                <Text>Enneagram Type:</Text>
+                <Badge ml={2} colorScheme="blue">
+                  Type {user.enneagramType}
+                  {user.enneagramWing && `w${user.enneagramWing}`}
+                </Badge>
+              </Flex>
+            ) : (
+              <Box mt={4}>
+                <Text color="gray.600" mb={4}>
+                  Take our assessment to discover your Enneagram type and receive personalized insights.
+                </Text>
+                <Button
+                  colorScheme="blue"
+                  variant="outline"
+                  onClick={() => navigate('/assessment')}
+                >
+                  Start Assessment
+                </Button>
+              </Box>
             )}
           </Box>
-
-          {!user?.enneagramType && (
-            <Box>
-              <Text color="gray.600">
-                Take our assessment to discover your Enneagram type and receive personalized insights.
-              </Text>
-              <Button
-                mt={4}
-                colorScheme="blue"
-                variant="outline"
-                onClick={() => navigate('/assessment')}
-              >
-                Start Assessment
-              </Button>
-            </Box>
-          )}
         </VStack>
       </Box>
     </Container>
