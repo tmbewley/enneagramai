@@ -2,11 +2,7 @@ const asyncHandler = require('express-async-handler');
 const Conversation = require('../models/conversationModel');
 const KnowledgeBase = require('../models/knowledgeBaseModel');
 const User = require('../models/userModel');
-const OpenAI = require('openai');
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+const axios = require('axios');
 
 // @desc    Chat with AI (public or authenticated)
 // @route   POST /api/ai/chat
@@ -47,46 +43,43 @@ const chatWithAI = asyncHandler(async (req, res) => {
     }
   }
 
-  // Prepare conversation context for AI
-  const contextMessages = [];
+  try {
+    // Prepare system context
+    const systemMessage = user?.enneagramType 
+      ? `You are an AI expert in the Enneagram system. The user is a Type ${user.enneagramType}${user.enneagramWing ? ` with a ${user.enneagramWing} wing` : ''}.`
+      : 'You are an AI expert in the Enneagram system, psychology, and personal development.';
 
-  // Add system message with Enneagram expertise
-  contextMessages.push({
-    role: 'system',
-    content: `You are an AI expert in the Enneagram system, psychology, and personal development. 
-    ${user?.enneagramType ? 
-      `The user is a Type ${user.enneagramType}${user.enneagramWing ? ` with a ${user.enneagramWing} wing` : ''}.` : 
-      'The user has not yet identified their Enneagram type.'}`
-  });
+    // Prepare messages array
+    const messages = [
+      { role: 'system', content: systemMessage }
+    ];
 
-  // Add conversation history for authenticated users
-  if (conversation) {
-    const recentMessages = conversation.messages.slice(-5); // Get last 5 messages
-    recentMessages.forEach(msg => {
-      contextMessages.push({
+    // Add conversation history if available
+    if (conversation) {
+      const recentMessages = conversation.messages.slice(-5);
+      messages.push(...recentMessages.map(msg => ({
         role: msg.role,
         content: msg.content
-      });
+      })));
+    }
+
+    // Add current user message
+    messages.push({ role: 'user', content: message });
+
+    // Call xAI Grok API
+    const response = await axios.post(process.env.XAI_API_URL, {
+      model: "grok-2-latest",
+      messages: messages,
+      stream: false,
+      temperature: 0.7
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.XAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
     });
-  }
 
-  // Add current user message
-  contextMessages.push({
-    role: 'user',
-    content: message
-  });
-
-  try {
-    // Generate AI response using OpenAI
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: contextMessages,
-      temperature: 0.7,
-      max_tokens: 500
-    });
-
-    const aiResponse = completion.choices[0].message.content;
-    const responseMetadata = await analyzeResponse(aiResponse);
+    const aiResponse = response.data.choices[0].message.content;
 
     // If authenticated, save to conversation history
     if (conversation) {
@@ -94,22 +87,14 @@ const chatWithAI = asyncHandler(async (req, res) => {
       conversation.messages.push({
         role: 'user',
         content: message,
-        metadata: {
-          emotionalTone: responseMetadata.userTone,
-          topics: responseMetadata.topics,
-        }
+        timestamp: new Date()
       });
 
       // Add AI response
       conversation.messages.push({
         role: 'assistant',
         content: aiResponse,
-        metadata: {
-          emotionalTone: responseMetadata.aiTone,
-          topics: responseMetadata.topics,
-          enneagramReferences: responseMetadata.enneagramReferences,
-          theoriesReferenced: responseMetadata.theoriesReferenced
-        }
+        timestamp: new Date()
       });
 
       // Update conversation analysis
@@ -124,11 +109,10 @@ const chatWithAI = asyncHandler(async (req, res) => {
     }
 
     res.status(200).json({
-      message: aiResponse,
-      analysis: responseMetadata
+      message: aiResponse
     });
   } catch (error) {
-    console.error('OpenAI API Error:', error);
+    console.error('xAI Grok API Error:', error);
     res.status(500).json({
       message: "I apologize, but I'm having trouble processing your request right now. Please try again in a moment.",
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
@@ -156,50 +140,46 @@ const getAIInsights = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(5);
 
-  const insights = await generateInsights(user, conversations);
-  
-  res.status(200).json(insights);
+  try {
+    const response = await axios.post(process.env.XAI_API_URL, {
+      model: "grok-2-latest",
+      messages: [
+        {
+          role: "system",
+          content: `Analyze the conversation history for a Type ${user.enneagramType} user and generate insights and recommendations. Return the analysis in JSON format.`
+        },
+        {
+          role: "user",
+          content: JSON.stringify(conversations.map(c => c.messages))
+        }
+      ],
+      stream: false,
+      temperature: 0.3
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.XAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const insights = JSON.parse(response.data.choices[0].message.content);
+    res.status(200).json(insights);
+  } catch (error) {
+    console.error('Error generating insights:', error);
+    res.status(500).json({
+      message: "Failed to generate insights",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
 });
 
 // Helper Functions
 
-// Analyze AI response for metadata
-const analyzeResponse = async (response) => {
-  try {
-    const analysis = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "Analyze the following AI response and extract metadata including emotional tone, topics discussed, Enneagram references, and psychological theories referenced. Return the analysis in JSON format."
-        },
-        {
-          role: "user",
-          content: response
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 200
-    });
-
-    return JSON.parse(analysis.choices[0].message.content);
-  } catch (error) {
-    console.error('Response analysis error:', error);
-    return {
-      aiTone: "neutral",
-      topics: ["personal development"],
-      enneagramReferences: [],
-      theoriesReferenced: []
-    };
-  }
-};
-
 // Update conversation analysis based on message history
 const updateConversationAnalysis = async (conversation) => {
   try {
-    const messages = conversation.messages.map(m => m.content).join('\n');
-    const analysis = await openai.chat.completions.create({
-      model: "gpt-4",
+    const response = await axios.post(process.env.XAI_API_URL, {
+      model: "grok-2-latest",
       messages: [
         {
           role: "system",
@@ -207,14 +187,19 @@ const updateConversationAnalysis = async (conversation) => {
         },
         {
           role: "user",
-          content: messages
+          content: JSON.stringify(conversation.messages)
         }
       ],
-      temperature: 0.3,
-      max_tokens: 300
+      stream: false,
+      temperature: 0.3
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.XAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
     });
 
-    conversation.analysis = JSON.parse(analysis.choices[0].message.content);
+    conversation.analysis = JSON.parse(response.data.choices[0].message.content);
   } catch (error) {
     console.error('Conversation analysis error:', error);
     // Fallback to basic analysis if API fails
@@ -225,45 +210,6 @@ const updateConversationAnalysis = async (conversation) => {
         challenges: [],
         strengths: [],
         recommendations: []
-      }
-    };
-  }
-};
-
-// Generate insights based on user data and conversation history
-const generateInsights = async (user, conversations) => {
-  try {
-    const conversationHistory = conversations.map(c => ({
-      messages: c.messages,
-      analysis: c.analysis
-    }));
-
-    const analysis = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: `Generate insights and recommendations for a Type ${user.enneagramType} user based on their conversation history. Return the analysis in JSON format.`
-        },
-        {
-          role: "user",
-          content: JSON.stringify(conversationHistory)
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 500
-    });
-
-    return JSON.parse(analysis.choices[0].message.content);
-  } catch (error) {
-    console.error('Insights generation error:', error);
-    return {
-      patterns: [],
-      recommendations: [],
-      progressMetrics: {
-        selfAwareness: 5,
-        growthTrend: "neutral",
-        keyAreas: []
       }
     };
   }
