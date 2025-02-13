@@ -7,17 +7,14 @@
   - ✅ User Model
   - ✅ Knowledge Base Model
   - ✅ Conversation Model
-- ✅ Controllers (In Progress)
+- ✅ Controllers (Completed)
   - ✅ User Controller (Basic Auth + Profile Management)
   - ✅ AI Controller (Chat, History, Insights)
-  - ⬜ Subscription Controller
+  - ✅ Subscription Controller (Stripe Integration)
 
 ## Next Steps
-- ⬜ Create Controllers (Continuing)
-  - ✅ User Controller
-  - ✅ AI Controller
-  - ⬜ Subscription Controller
-- ⬜ Set up Routes
+- ✅ Create Controllers (Completed)
+- ⬜ Set up API Routes
 - ⬜ Initialize React Frontend
 - ⬜ Set up Authentication
 - ⬜ Implement Stripe Integration
@@ -25,6 +22,11 @@
 
 ## Completed Features
 ### Backend Structure (In Progress)
+- ✅ Payment System
+  - ✅ Stripe integration
+  - ✅ Subscription management
+  - ✅ Webhook handling
+  - ✅ Premium features control
 - ✅ User Authentication System
 - ✅ AI Interaction System
   - ✅ Conversation management
