@@ -7,10 +7,14 @@
   - ✅ User Model
   - ✅ Knowledge Base Model
   - ✅ Conversation Model
+- ✅ Controllers (In Progress)
+  - ✅ User Controller (Basic Auth + Profile Management)
+  - ⬜ AI Controller
+  - ⬜ Subscription Controller
 
 ## Next Steps
-- ⬜ Create Controllers
-  - ⬜ User Controller
+- ⬜ Create Controllers (Continuing)
+  - ✅ User Controller
   - ⬜ AI Controller
   - ⬜ Subscription Controller
 - ⬜ Set up Routes
@@ -21,6 +25,11 @@
 
 ## Completed Features
 ### Backend Structure (In Progress)
+- ✅ User Authentication System
+  - ✅ Registration endpoint
+  - ✅ Login endpoint
+  - ✅ Profile management
+  - ✅ JWT token generation
 - ✅ Project initialization
 - ✅ Git repository setup
 - ✅ Basic dependency configuration
