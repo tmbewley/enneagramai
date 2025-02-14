@@ -9,7 +9,7 @@
     "client": "npm start --prefix frontend",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "install-client": "cd frontend && npm install",
-    "build": "cd frontend && npm install --legacy-peer-deps && set \"NODE_ENV=production\" && set \"CI=false\" && set \"SKIP_PREFLIGHT_CHECK=true\" && npm run build",
+    "build": "cd frontend && npm install --legacy-peer-deps && export NODE_OPTIONS=--openssl-legacy-provider && export NODE_ENV=production && export CI=false && export SKIP_PREFLIGHT_CHECK=true && npm run build",
     "render-postbuild": "NPM_CONFIG_PRODUCTION=false npm run install-client && npm run build"
   },
   "engines": {
