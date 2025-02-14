@@ -13,17 +13,33 @@ const initializeSocket = (server) => {
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
-    // Handle typing status
+    // Handle room joining
+    socket.on('join_room', (roomId) => {
+      socket.join(roomId);
+      console.log(`User joined room: ${roomId}`);
+    });
+
+    // Handle room leaving
+    socket.on('leave_room', (roomId) => {
+      socket.leave(roomId);
+      console.log(`User left room: ${roomId}`);
+    });
+
+    // Handle typing status with rooms
     socket.on('typing_start', (data) => {
-      socket.broadcast.emit('user_typing', {
-        userId: data.userId,
+      const { userId, roomId } = data;
+      socket.to(roomId).emit('user_typing', {
+        userId,
+        roomId,
         typing: true
       });
     });
 
     socket.on('typing_end', (data) => {
-      socket.broadcast.emit('user_typing', {
-        userId: data.userId,
+      const { userId, roomId } = data;
+      socket.to(roomId).emit('user_typing', {
+        userId,
+        roomId,
         typing: false
       });
     });

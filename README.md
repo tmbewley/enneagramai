@@ -1,97 +1,136 @@
-# Enneagram AI
+# EnneagramAI
 
-An AI-powered personal development platform that integrates multiple psychological and consciousness theories.
-
-## Overview
-
-Enneagram AI is a sophisticated full-stack web application that combines the ancient wisdom of the Enneagram with modern artificial intelligence to provide personalized growth insights and recommendations.
+AI-powered personal development platform integrating psychological and consciousness theories.
 
 ## Features
 
-- 🤖 Conversational AI interface
-- 🔄 Integration of multiple consciousness theories
-- 👤 Personalized user experience
-- 📊 Progress tracking and health level monitoring
-- 🤝 Relationship compatibility analysis
-- 📱 Responsive design for all devices
-- 🌙 Dark mode support
+- User Authentication
+- AI Chat Interface with xAI Grok Integration
+- Real-time Typing Indicators
+- Assessment System
+- Personal Development Tracking
+- Conversation History
+- Secure JWT Authentication
 
 ## Tech Stack
 
-- **Frontend**: React.js
-- **Backend**: Node.js/Express
+- **Frontend**: React, TypeScript, Chakra UI
+- **Backend**: Node.js, Express
 - **Database**: MongoDB
-- **Authentication**: JWT
-- **Payment Processing**: Stripe
+- **Real-time**: Socket.IO
+- **AI**: xAI Grok API
 
-## Project Structure
+## Prerequisites
 
-```
-enneagram-ai/
-├── frontend/           # React frontend application
-├── backend/           # Node.js/Express backend
-│   ├── config/       # Configuration files
-│   ├── controllers/  # Route controllers
-│   ├── middleware/   # Custom middleware
-│   ├── models/       # Database models
-│   ├── routes/       # API routes
-│   └── server.js     # Server entry point
-├── .env              # Environment variables
-├── .gitignore        # Git ignore rules
-└── package.json      # Project dependencies and scripts
-```
+- Node.js (v14 or higher)
+- MongoDB Atlas account
+- xAI API key
 
-## Getting Started
+## Installation
 
 1. Clone the repository:
-\`\`\`bash
-git clone [repository-url]
-\`\`\`
+```bash
+git clone https://github.com/yourusername/enneagramai.git
+cd enneagramai
+```
 
 2. Install dependencies:
-\`\`\`bash
+```bash
+# Install backend dependencies
 npm install
-cd frontend && npm install
-\`\`\`
+
+# Install frontend dependencies
+npm run install-client
+```
 
 3. Set up environment variables:
-Create a .env file in the root directory with the following variables:
-\`\`\`
-NODE_ENV=development
+   - Copy `.env.example` to `.env`
+   - Fill in your environment variables:
+     - `MONGO_URI`: Your MongoDB connection string
+     - `JWT_SECRET`: A secure random string for JWT signing
+     - `XAI_API_KEY`: Your xAI API key
+     - `XAI_API_URL`: The xAI API endpoint
+     - `FRONTEND_URL`: Your frontend URL (in development: http://localhost:3000)
+
+## Development
+
+Run the development server:
+
+```bash
+# Run both frontend and backend
+npm run dev
+
+# Run backend only
+npm run server
+
+# Run frontend only
+npm run client
+```
+
+The development server will be available at:
+- Frontend: http://localhost:3000
+- Backend: http://localhost:5000
+
+## Production Deployment
+
+### Preparing for Production
+
+1. Update environment variables:
+   - Create new MongoDB Atlas cluster for production
+   - Generate new JWT secret
+   - Update API keys
+   - Set NODE_ENV to 'production'
+
+2. Build the frontend:
+```bash
+npm run build
+```
+
+### Deployment Options
+
+#### Option 1: Render.com (Recommended)
+
+1. Create a new Web Service on Render
+2. Connect your GitHub repository
+3. Configure environment variables in Render dashboard
+4. Set build command: `npm install && npm run install-client && npm run build`
+5. Set start command: `npm start`
+
+#### Option 2: Railway.app
+
+1. Create new project on Railway
+2. Connect your GitHub repository
+3. Add environment variables
+4. Railway will automatically detect and deploy your application
+
+#### Option 3: Vercel (Frontend) + Railway/Render (Backend)
+
+1. Deploy frontend to Vercel:
+   - Connect GitHub repository
+   - Set build command: `cd frontend && npm install && npm run build`
+   - Configure environment variables
+
+2. Deploy backend separately using Railway or Render instructions above
+
+## Environment Variables
+
+```env
+NODE_ENV=production
 PORT=5000
 MONGO_URI=your_mongodb_uri
 JWT_SECRET=your_jwt_secret
-STRIPE_SECRET_KEY=your_stripe_secret
-STRIPE_PRICE_ID=your_stripe_price_id
-\`\`\`
-
-4. Run the development server:
-\`\`\`bash
-npm run dev
-\`\`\`
-
-## API Documentation
-
-### Authentication Endpoints
-
-- POST /api/users/register - Register a new user
-- POST /api/users/login - Login user
-- GET /api/users/profile - Get user profile
-
-### AI Interaction Endpoints
-
-- POST /api/ai/chat - Send message to AI
-- GET /api/ai/history - Get chat history
-
-### Subscription Endpoints
-
-- POST /api/subscription/create - Create subscription
-- GET /api/subscription/status - Get subscription status
-- POST /api/subscription/cancel - Cancel subscription
+XAI_API_URL=your_xai_api_url
+XAI_API_KEY=your_xai_api_key
+FRONTEND_URL=your_frontend_url
+```
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## License
 

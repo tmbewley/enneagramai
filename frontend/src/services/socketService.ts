@@ -26,19 +26,31 @@ class SocketService {
   }
 
   // Typing indicator methods
-  emitTypingStart(userId: string) {
+  joinRoom(roomId: string) {
     if (this.socket) {
-      this.socket.emit('typing_start', { userId });
+      this.socket.emit('join_room', roomId);
     }
   }
 
-  emitTypingEnd(userId: string) {
+  leaveRoom(roomId: string) {
     if (this.socket) {
-      this.socket.emit('typing_end', { userId });
+      this.socket.emit('leave_room', roomId);
     }
   }
 
-  onUserTyping(callback: (data: { userId: string; typing: boolean }) => void) {
+  emitTypingStart(userId: string, roomId: string) {
+    if (this.socket) {
+      this.socket.emit('typing_start', { userId, roomId });
+    }
+  }
+
+  emitTypingEnd(userId: string, roomId: string) {
+    if (this.socket) {
+      this.socket.emit('typing_end', { userId, roomId });
+    }
+  }
+
+  onUserTyping(callback: (data: { userId: string; roomId: string; typing: boolean }) => void) {
     if (this.socket) {
       this.socket.on('user_typing', callback);
     }

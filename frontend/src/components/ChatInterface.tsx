@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   VStack,
@@ -26,9 +26,13 @@ interface Message {
 
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
+  type MessageState = Message[];
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [cursor, setCursor] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -43,37 +47,99 @@ const ChatInterface: React.FC = () => {
     socketService.connect();
 
     // Listen for typing events
-    socketService.onUserTyping(({ typing }) => {
-      setIsTyping(typing);
+    socketService.onUserTyping(({ userId, typing }) => {
+      // Only show typing indicator for other users
+      if (userId !== user?._id) {
+        setIsTyping(typing);
+      }
     });
+
+    // Load initial messages if user is authenticated
+    if (user) {
+      loadMessages();
+    }
 
     // Cleanup on unmount
     return () => {
       socketService.removeTypingListener();
       socketService.disconnect();
     };
-  }, []);
+  }, [user]);
+
+  const loadMessages = async (loadMore: boolean = false) => {
+    if (!user || (!loadMore && isLoading) || (loadMore && isLoadingMore)) return;
+    
+    try {
+      loadMore ? setIsLoadingMore(true) : setIsLoading(true);
+      
+      const response = await axios.get('/api/ai/history', {
+        params: {
+          limit: 20,
+          cursor: loadMore ? cursor : undefined
+        }
+      });
+
+      const { conversations, hasMore: more, nextCursor } = response.data;
+      
+      setMessages((prev: MessageState) => loadMore ? [...prev, ...conversations] : conversations);
+      setHasMore(more);
+      setCursor(nextCursor);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load messages. Please try again.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      loadMore ? setIsLoadingMore(false) : setIsLoading(false);
+    }
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop } = e.currentTarget;
+    
+    if (scrollTop === 0 && hasMore && !isLoadingMore) {
+      loadMessages(true);
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
 
+  // Generate a unique room ID for each conversation
+  const roomId = useMemo(() => {
+    return user?._id ? `chat_${user._id}` : 'public_chat';
+  }, [user?._id]);
+
+  // Join room on component mount
+  useEffect(() => {
+    if (roomId) {
+      socketService.joinRoom(roomId);
+      return () => {
+        socketService.leaveRoom(roomId);
+      };
+    }
+  }, [roomId]);
+
   const handleTyping = useCallback(() => {
-    if (user?._id) {
+    if (user?._id && roomId) {
       // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
 
       // Emit typing start
-      socketService.emitTypingStart(user._id);
+      socketService.emitTypingStart(user._id, roomId);
 
       // Set new timeout to emit typing end
       typingTimeoutRef.current = setTimeout(() => {
-        socketService.emitTypingEnd(user._id);
+        socketService.emitTypingEnd(user._id, roomId);
       }, 1000);
     }
-  }, [user?._id]);
+  }, [user?._id, roomId]);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -85,7 +151,7 @@ const ChatInterface: React.FC = () => {
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, newUserMessage]);
+      setMessages((prev: MessageState) => [...prev, newUserMessage]);
     setInputMessage('');
     setIsLoading(true);
 
@@ -102,7 +168,7 @@ const ChatInterface: React.FC = () => {
         timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages((prev: MessageState) => [...prev, aiResponse]);
     } catch (error) {
       toast({
         title: 'Error',
@@ -147,6 +213,7 @@ const ChatInterface: React.FC = () => {
         overflowY="auto"
         spacing={4}
         align="stretch"
+        onScroll={handleScroll}
         css={{
           '&::-webkit-scrollbar': {
             width: '4px',
@@ -160,6 +227,11 @@ const ChatInterface: React.FC = () => {
           },
         }}
       >
+        {isLoadingMore && (
+          <Flex justify="center" p={4}>
+            <Text color="gray.500">Loading more messages...</Text>
+          </Flex>
+        )}
         {messages.map((message) => (
           <Box
             key={message.id}

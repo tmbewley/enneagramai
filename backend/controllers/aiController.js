@@ -124,11 +124,26 @@ const chatWithAI = asyncHandler(async (req, res) => {
 // @route   GET /api/ai/history
 // @access  Private
 const getConversationHistory = asyncHandler(async (req, res) => {
-  const conversations = await Conversation.find({ user: req.user.id })
-    .sort({ createdAt: -1 })
-    .limit(req.query.limit ? Number(req.query.limit) : 10);
+  const limit = Number(req.query.limit) || 20;
+  const cursor = req.query.cursor; // timestamp of the oldest message
+  
+  let query = { user: req.user.id };
+  if (cursor) {
+    query.createdAt = { $lt: new Date(cursor) };
+  }
 
-  res.status(200).json(conversations);
+  const conversations = await Conversation.find(query)
+    .sort({ createdAt: -1 })
+    .limit(limit + 1); // Get one extra to check if there are more
+
+  const hasMore = conversations.length > limit;
+  const results = hasMore ? conversations.slice(0, -1) : conversations;
+  
+  res.status(200).json({
+    conversations: results,
+    hasMore,
+    nextCursor: hasMore ? results[results.length - 1].createdAt.toISOString() : null
+  });
 });
 
 // @desc    Get AI insights and recommendations
