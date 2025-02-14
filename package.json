@@ -10,7 +10,7 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "clean": "rimraf node_modules frontend/node_modules frontend/build",
     "install-client": "cd frontend && npm install",
-    "build": "npm run clean && npm install && cd frontend && npm install --legacy-peer-deps && NODE_ENV=production CI=false npx react-scripts build",
+    "build": "npm run clean && npm install && cd frontend && npm install --legacy-peer-deps && NODE_ENV=production CI=false npm run build",
     "render-postbuild": "NPM_CONFIG_PRODUCTION=false npm run install-client && npm run build"
   },
   "engines": {
