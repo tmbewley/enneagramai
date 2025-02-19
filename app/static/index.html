@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gurdjieff Teachings</title>
+    <style>
+        body { 
+            max-width: 800px; 
+            margin: 20px auto; 
+            font-family: Arial, sans-serif; 
+            padding: 20px;
+            line-height: 1.6;
+        }
+        #chat-container { 
+            height: 500px; 
+            overflow-y: auto; 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+        #input-container { 
+            display: flex; 
+            gap: 10px;
+        }
+        #user-input { 
+            flex-grow: 1; 
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button { 
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .message { 
+            margin: 10px 0; 
+            padding: 12px; 
+            border-radius: 8px;
+            max-width: 80%;
+            white-space: pre-wrap;
+        }
+        .user { 
+            background: #e6f2ff; 
+            margin-left: auto;
+        }
+        .bot { 
+            background: #f0f0f0; 
+            margin-right: auto;
+        }
+        .loading {
+            display: inline-block;
+            margin-right: auto;
+            padding: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gurdjieff Teachings Chat</h1>
+    <div id="chat-container"></div>
+    <div id="input-container">
+        <input type="text" id="user-input" placeholder="Ask about Gurdjieff's teachings...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        let isWaiting = false;
+
+        async function sendMessage() {
+            if (isWaiting) return;
+            
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Clear input
+            userInput.value = '';
+            
+            // Add user message
+            appendMessage(true, message);
+            
+            // Show loading
+            isWaiting = true;
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading';
+            loadingDiv.textContent = 'Thinking...';
+            chatContainer.appendChild(loadingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                // Remove loading message
+                chatContainer.removeChild(loadingDiv);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const botMessage = data.messages[1].text;
+                    appendMessage(false, botMessage);
+                } else {
+                    const error = await response.text();
+                    appendMessage(false, `Error: ${error}`);
+                }
+            } catch (error) {
+                // Remove loading message
+                chatContainer.removeChild(loadingDiv);
+                appendMessage(false, `Error: ${error.message}`);
+            }
+
+            isWaiting = false;
+        }
+
+        function appendMessage(isUser, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !isWaiting) {
+                sendMessage();
+            }
+        });
+
+        // Initial greeting
+        appendMessage(false, "Hello! I'm here to discuss Gurdjieff's teachings. What would you like to know about?");
+    </script>
+</body>
+</html>
