@@ -11,6 +11,7 @@
         .message { margin: 10px 0; padding: 10px; border-radius: 4px; white-space: pre-wrap; }
         .user { background: #e6f2ff; text-align: right; }
         .bot { background: #f0f0f0; }
+        .error { background: #ffe6e6; color: #cc0000; }
     </style>
 </head>
 <body>
@@ -29,9 +30,9 @@
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
 
-        function appendMessage(isUser, text) {
+        function appendMessage(isUser, text, isError = false) {
             const div = document.createElement('div');
-            div.className = `message ${isUser ? 'user' : 'bot'}`;
+            div.className = `message ${isUser ? 'user' : isError ? 'error' : 'bot'}`;
             div.textContent = text;
             chatContainer.appendChild(div);
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -50,7 +51,8 @@
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${API_TOKEN}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({
                         messages: [{
@@ -60,12 +62,25 @@
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new TypeError("Received non-JSON response from server");
+                }
+
                 const data = await response.json();
+                if (!data.messages || !data.messages.length) {
+                    throw new Error("Invalid response format");
+                }
+
                 const botResponse = data.messages[data.messages.length - 1].text;
                 appendMessage(false, botResponse);
             } catch (error) {
-                appendMessage(false, "Sorry, there was an error processing your request.");
-                console.error('Error:', error);
+                console.error('Error details:', error);
+                appendMessage(false, `Error: ${error.message}. Please try again later.`, true);
             }
         }
 
@@ -76,6 +91,9 @@
                 sendMessage();
             }
         });
+
+        // Initial greeting
+        appendMessage(false, "Hello! I'm here to discuss Gurdjieff's teachings with you. What would you like to know?");
     </script>
 </body>
 </html>
