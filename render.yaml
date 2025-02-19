@@ -1,10 +1,9 @@
 services:
-  - type: web
+  - type: static
     name: enneagramai
-    env: static
-    buildCommand: echo "No build required"
+    buildCommand: null
     staticPublishPath: ./
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
