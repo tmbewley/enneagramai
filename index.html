@@ -66,16 +66,7 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                const contentType = response.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) {
-                    throw new TypeError("Received non-JSON response from server");
-                }
-
                 const data = await response.json();
-                if (!data.messages || !data.messages.length) {
-                    throw new Error("Invalid response format");
-                }
-
                 const botResponse = data.messages[data.messages.length - 1].text;
                 appendMessage(false, botResponse);
             } catch (error) {
