@@ -1,0 +1,11 @@
+{
+  "name": "enneagramai",
+  "version": "1.0.0",
+  "description": "Gurdjieff Teachings Chat Interface",
+  "main": "index.html",
+  "scripts": {
+    "start": "echo 'Static site, no build required'"
+  },
+  "author": "",
+  "license": "ISC"
+}

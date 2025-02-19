@@ -1,9 +1,5 @@
 services:
   - type: static
     name: enneagramai
-    buildCommand: null
-    staticPublishPath: ./
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache
+    buildCommand: npm start
+    staticPublishPath: .
