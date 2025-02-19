@@ -1,5 +1,5 @@
 services:
   - type: static
     name: enneagramai
-    buildCommand: npm start
+    buildCommand: null
     staticPublishPath: .
