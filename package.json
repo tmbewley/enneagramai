@@ -1,0 +1,42 @@
+{
+  "name": "enneagram-ai",
+  "version": "1.0.0",
+  "description": "AI-powered personal development platform integrating psychological and consciousness theories",
+  "main": "server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "server": "nodemon backend/server.js",
+    "client": "npm start --prefix frontend",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install-client": "cd frontend && npm install",
+    "build": "cd frontend && npm install --legacy-peer-deps && export NODE_OPTIONS=--openssl-legacy-provider && export NODE_ENV=production && export CI=false && export SKIP_PREFLIGHT_CHECK=true && npm run build",
+    "render-postbuild": "NPM_CONFIG_PRODUCTION=false npm run install-client && npm run build"
+  },
+  "engines": {
+    "node": ">=16.x"
+  },
+  "keywords": [
+    "enneagram",
+    "AI",
+    "personal-development"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.18.2",
+    "express-async-handler": "^1.2.0",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^7.0.3",
+    "openai": "^4.85.0",
+    "socket.io": "^4.8.1",
+    "stripe": "^12.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "8.2.2",
+    "nodemon": "^2.0.22"
+  }
+}
