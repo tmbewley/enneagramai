@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gurdjieff Teachings</title>
+    <style>
+        body { max-width: 800px; margin: 20px auto; font-family: Arial, sans-serif; padding: 20px; }
+        #chat-container { height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        #input-container { display: flex; gap: 10px; }
+        #user-input { flex-grow: 1; padding: 8px; }
+        button { padding: 8px 20px; }
+        .message { margin: 10px 0; padding: 10px; border-radius: 4px; white-space: pre-wrap; }
+        .user { background: #e6f2ff; text-align: right; }
+        .bot { background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Gurdjieff Teachings Chat</h1>
+    <div id="chat-container"></div>
+    <div id="input-container">
+        <input type="text" id="user-input" placeholder="Ask about Gurdjieff's teachings...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        const DEPLOYMENT_ID = '9b9bee200';
+        const API_TOKEN = 'bb125418e88d4ab6a5b6ebc95b707468';
+        const API_URL = `https://api.abacus.ai/api/v0/deployment/${DEPLOYMENT_ID}/chat_completion`;
+
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+
+        function appendMessage(isUser, text) {
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'user' : 'bot'}`;
+            div.textContent = text;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Display user message
+            appendMessage(true, message);
+            userInput.value = '';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        messages: [{
+                            is_user: true,
+                            text: message
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                const botResponse = data.messages[data.messages.length - 1].text;
+                appendMessage(false, botResponse);
+            } catch (error) {
+                appendMessage(false, "Sorry, there was an error processing your request.");
+                console.error('Error:', error);
+            }
+        }
+
+        // Handle Enter key
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
